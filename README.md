@@ -1,4 +1,8 @@
 # youtubePlaylistDL
+
+## ℹ️ Sobre este repositório
+
+Script para baixar playlists do YouTube.
 A simple script to download all videos in a youtube playlist (720p quality)
 
 ### Requirements:
