@@ -1,2 +1,9 @@
 *.iml
 .idea/
+.venv/
+__pycache__/
+.ruff_cache/
+*.py[cod]
+*.mp4
+*.mp3
+*.wav

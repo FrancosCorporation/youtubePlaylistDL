@@ -1,204 +1,151 @@
 # MELHORIAS — youtubePlaylistDL
 
-> **Gerado por análise de código em 2026-10-05** · Stack: Python + pytube + urllib + ffmpeg/lame · Branch: main
-
-Plano de melhoria do projeto `youtubePlaylistDL` (script único `ytPlaylistDL.py`, ~175 linhas), gerado exclusivamente a partir de leitura direta do código, do `README.md` e do `.gitignore` em 2026-10-05. Nenhum arquivo:linha foi inventado — todos os itens usam somente os fatos da análise recebida.
+> **Análise inicial:** 2026-10-05 · **Atualizado:** 2026-10-11 · Python 3.10+ · branch `master`
+> O programa continua pequeno: um CLI para playlist, MP4 progressivo e MP3.
 
 ## 0. Como usar este documento
 
-- Cada item tem um ID estável (`BUG-*`, `SEC-*`, `TEST-*`, `DEVOPS-*`, `DOC-*`) e uma severidade: **[P0]** (bloqueia execução / corrige primeiro), **[P1]** (importante, funcional ou de reprodutibilidade), **[P2]** (higiene, hardening e dívida técnica).
-- Cada item traz 6 campos obrigatórios: **Arquivo:** (onde mexer), **Evidência:** (fato observado no código), **Impacto:** (por que importa), **Mudança:** (o que fazer), **Aceite:** (critério de pronto do item), **Verificação:** (comando em bloco `bash` para conferir).
-- Ordem recomendada: Wave 1 (P0) → Wave 2 (P1) → Wave 3 (P2). Ver detalhes em `## 8. Ordem de execução (waves)`.
-- Escopo: somente `ytPlaylistDL.py`, `README.md`, `requirements.txt` (a criar), testes e CI. Fora de escopo em `## 9. Fora de escopo / riscos`.
-- Convenção de verificação: comandos `grep` vazios significam "problema eliminado"; comandos `cat`/`ls`/`pytest` significam "artefato existe e passa".
+1. Resolva P0 antes de P1 e P2.
+2. Marque cada item ao implementar e rode as verificações estáticas indicadas.
+3. Não baixe conteúdo sem autorização; consulte os Termos do YouTube.
+4. TEST-01 permanece pendente; não foram criados nem executados testes nesta rodada.
 
 ## 1. Diagnóstico executivo
 
-Projeto mínimo e legível: um único script `ytPlaylistDL.py` (~175 linhas) que baixa vídeos/áudios de uma playlist do YouTube. É um fork de repositório externo (há merge de PR do autor original no histórico). Não há `requirements.txt`, testes ou CI; o `.gitignore` só tem `*.iml`/`.idea`.
+O script antigo dependia de `time.clock`, raspava HTML da playlist com regex, criava caminhos a partir do título e chamava FFmpeg/LAME via shell. Também não fixava a dependência nem explicava a instalação dos conversores.
 
-### O que está bem
-
-| Aspecto | Evidência |
-|---|---|
-| Escopo pequeno e auditável | Único código: `ytPlaylistDL.py` (~175 linhas) |
-| Funções puras isoláveis para teste | `getHumanTime`, `bytestostr`, `getFinalVideoUrl`, `getPlaylistUrlID` não precisam de rede |
-| Fluxo principal simples | `getPageHtml` → `getPlaylistVideoUrls` → `download_Video_Audio` em `ytPlaylistDL.py` |
-| Criação de diretório tolerante | `os.makedirs(directory, exist_ok=True)` em `ytPlaylistDL.py` |
-
-### O que está quebrado
-
-| Problema | ID | Severidade |
-|---|---|---|
-| `time.clock` removido no Python 3.8+, script não executa | BUG-01 | [P0] |
-| `os.rename` com `yt.title` cru quebra em títulos com caracteres inválidos | BUG-02 | [P0] |
-| Scraping de HTML com regex sem timeout/User-Agent | BUG-03 | [P1] |
-| Dependência `pytube` sem pin (`pip3 install pytube` solto) | SEC-01 | [P1] |
-| `os.system` com interpolação + binários externos `ffmpeg`/`lame` sem checagem | SEC-02 | [P2] |
-| URL final construída com `http://` | SEC-03 | [P2] |
-| Zero testes | TEST-01 | [P2] |
-| Sem CI/lint | DEVOPS-01 | [P2] |
-| `README.md` pede Python 3.4.1+ (2014, EOL) | DOC-01 | [P2] |
+As correções desta rodada substituem o scraper pelo `Playlist` de `pytubefix`, fixam a dependência, validam os hosts/IDs, limitam o tempo de rede, usam nomes numéricos e executam os conversores sem shell.
 
 ## 2. Tabela de prioridades
 
-| ID | Título | Sev. | Arquivo |
+| ID | Item | Severidade | Estado |
 |---|---|---|---|
-| BUG-01 | time.clock removido no Python 3.8+, script não executa | [P0] | ytPlaylistDL.py:21 |
-| BUG-02 | os.rename com yt.title cru quebra em títulos com caracteres inválidos | [P0] | ytPlaylistDL.py:129-136 |
-| BUG-03 | scraping de HTML com regex sem timeout/User-Agent | [P1] | ytPlaylistDL.py:getPageHtml/getPlaylistVideoUrls |
-| SEC-01 | dependência pytube sem pin | [P1] | (ausente) requirements.txt |
-| SEC-02 | os.system com interpolação + binários externos sem checagem | [P2] | ytPlaylistDL.py:131-135 |
-| SEC-03 | URL final construída com http:// | [P2] | ytPlaylistDL.py:getFinalVideoUrl |
-| TEST-01 | zero testes | [P2] | (ausente) tests/ |
-| DEVOPS-01 | sem CI/lint | [P2] | (ausente) .github/workflows/ |
-| DOC-01 | README pede Python 3.4.1+ (2014, EOL) | [P2] | README.md |
+| BUG-01 | `time.clock` removido em Python moderno | P0 | Implementado |
+| BUG-02 | Nome de arquivo baseado em título externo | P0 | Implementado |
+| BUG-03 | Scraper frágil e sem limite de rede | P1 | Implementado |
+| SEC-01 | Dependência não fixada e sem manutenção recente | P1 | Implementado com `pytubefix` |
+| SEC-02 | Execução de conversores via shell | P2 | Implementado |
+| SEC-03 | URL final usando HTTP | P2 | Implementado |
+| TEST-01 | Sem testes unitários | P2 | Pendente |
+| DEVOPS-01 | Sem lint/CI | P2 | Implementado; CI não executa testes |
+| DOC-01 | Requisitos e limitações legais desatualizados | P2 | Implementado |
 
 ## 3. Segurança
 
-### SEC-01 · dependência pytube sem pin · [P1]
+### SEC-01 · Dependência instável e sem pin · [P1]
 
-- **Arquivo:** (ausente) requirements.txt
-- **Evidência:** `ytPlaylistDL.py` faz `from pytube import YouTube` sem pin de versão; o `README.md` manda `pip3 install pytube` solto. O `pytube` quebra com frequência por mudanças do YouTube.
-- **Impacto:** Instalação não reproduzível: cada máquina pode pegar uma versão diferente do `pytube`, e quebras por mudanças do YouTube não são rastreáveis nem reversíveis.
-- **Mudança:** Criar `requirements.txt` com `pytube==<versão testada>` (a versão que for validada manualmente) e atualizar o `README.md` para mandar `pip install -r requirements.txt`.
-- **Aceite:** `pip install -r requirements.txt` reproduz o ambiente; a versão do `pytube` está pinada.
-- **Verificação:**
-```bash
-cat requirements.txt
-```
+- **Arquivo:** `requirements.txt`
+- **Evidência:** `pytube` no PyPI continua na versão 15.0.0, publicada em 2023; mudanças do YouTube causam falhas na extração.
+- **Mudança:** usar `pytubefix==11.2.0`, publicada em 2026, mantendo uma versão exata.
+- **Aceite:** ambiente reproduzível com parser de playlist e download progressivo.
+- **Verificação:** `python -m pip install -r requirements.txt --dry-run`
 
-### SEC-02 · os.system com interpolação + binários externos sem checagem · [P2]
+### SEC-02 · Conversores chamados pelo shell · [P2]
 
-- **Arquivo:** ytPlaylistDL.py:131-135
-- **Evidência:** `download_Video_Audio` monta `aud = 'ffmpeg -i '+str(file_no)+'.mp4'+' '+str(file_no)+'.wav'` e chama `os.system(aud)`, depois `os.system(final_audio)` com `lame`. `file_no` é índice (seguro), mas há shell via `os.system` sem `shlex` e dependência de binários externos `ffmpeg`/`lame` não declarados nem checados.
-- **Impacto:** Uso de shell sem necessidade (risco de injeção se o padrão for copiado para entradas não seguras) e falha opaca quando `ffmpeg`/`lame` não estão instalados.
-- **Mudança:** Trocar `os.system` com concatenação por `subprocess.run` com lista de args (sem shell) e checar `shutil.which('ffmpeg')` / `shutil.which('lame')` no início com erro claro; documentar a dependência no `README.md`.
-- **Aceite:** Sem `os.system` com concatenação no arquivo; ausência de `ffmpeg`/`lame` gera mensagem de erro clara em vez de falha silenciosa.
-- **Verificação:**
-```bash
-grep -n 'os.system' ytPlaylistDL.py
-```
+- **Arquivo:** `ytPlaylistDL.py`
+- **Evidência:** o código antigo concatenava nomes e chamava `os.system`.
+- **Mudança:** usar `subprocess.run` com argumentos separados, sem shell; checar `ffmpeg` e `lame` antes da rede.
+- **Aceite:** ausência dos executáveis gera uma mensagem clara; nomes de saída não são interpretados pelo shell.
+- **Verificação:** `rg -n 'os\.system|subprocess\.run|shutil\.which' ytPlaylistDL.py`
 
-### SEC-03 · URL final construída com http:// · [P2]
+### SEC-03 · URLs de vídeo em HTTP · [P2]
 
-- **Arquivo:** ytPlaylistDL.py:getFinalVideoUrl
-- **Evidência:** `getFinalVideoUrl` constrói `'http://www.youtube.com/'` (http, não https).
-- **Impacto:** URLs geradas usam transporte sem TLS; tráfego pode ser interceptado/modificado em vez de usar `https`.
-- **Mudança:** Trocar o prefixo para `https://` em `getFinalVideoUrl`.
-- **Aceite:** URLs de saída saem com `https`.
-- **Verificação:**
-```bash
-grep -n 'http://www.youtube' ytPlaylistDL.py
-```
+- **Arquivo:** `ytPlaylistDL.py`
+- **Evidência:** o código antigo prefixava URLs com `http://www.youtube.com/`.
+- **Mudança:** validar host e ID e gerar links canônicos `https://www.youtube.com/watch?v=...`.
+- **Aceite:** links da playlist usam HTTPS e hosts externos são recusados.
+- **Verificação:** `rg -n 'http://www\.youtube|https://www\.youtube' ytPlaylistDL.py`
 
 ## 4. Bugs e defeitos funcionais
 
-### BUG-01 · time.clock removido no Python 3.8+, script não executa · [P0]
+### BUG-01 · `time.clock` foi removido · [P0]
 
-- **Arquivo:** ytPlaylistDL.py:21
-- **Evidência:** `print_progress` contém `elapsed = int(time.clock() - start) + 1`. `time.clock` foi removido no Python 3.8, logo qualquer Python moderno levanta `AttributeError`.
-- **Impacto:** O script não executa em qualquer Python moderno: a barra de progresso quebra com `AttributeError` ([P0], bloqueante total).
-- **Mudança:** Trocar `time.clock()` por `time.perf_counter()` (ou `time.monotonic()`), mantendo o restante do cálculo de `elapsed`.
-- **Aceite:** `print_progress` executa sem `AttributeError` em Python moderno.
-- **Verificação:**
-```bash
-python3 -c "import time; print(hasattr(time,'clock'))"
-grep -n time.clock ytPlaylistDL.py
-```
+- **Arquivo:** `ytPlaylistDL.py`, `ProgressBar`
+- **Evidência:** `time.clock()` não existe em Python 3.8+ e a barra também podia dividir por zero no primeiro bloco.
+- **Mudança:** medir com `time.perf_counter()` e limitar taxa/tempo restante a valores seguros.
+- **Aceite:** barra de progresso funciona em Python moderno.
+- **Verificação:** `rg -n 'time\.clock|perf_counter' ytPlaylistDL.py`
 
-### BUG-02 · os.rename com yt.title cru quebra em títulos com caracteres inválidos · [P0]
+### BUG-02 · Título do vídeo era usado como caminho · [P0]
 
-- **Arquivo:** ytPlaylistDL.py:129-136
-- **Evidência:** `download_Video_Audio` faz `os.rename(yt.title+'.mp4', ...)` usando `yt.title` (título do vídeo, controlado pelo uploader) para construir nome de arquivo. Títulos com travessia/encoding estranho ou caracteres inválidos quebram o rename; o `except OSError` genérico engole o erro. `file_no` é índice (seguro).
-- **Impacto:** Vídeos com títulos contendo `/`, `:`, `?` (ou outros caracteres inválidos no SO) baixam mas não renomeiam/convertam — falha silenciosa com `OSError` genérico engolido ([P0]).
-- **Mudança:** Sanitizar o título (regex `[^\w\-. ]` ou `slugify`) antes de usar como nome de arquivo, e/ou usar o nome de arquivo retornado pelo download em vez de reconstruir a partir de `yt.title`.
-- **Aceite:** Vídeo com título contendo `/ : ?` baixa e renomeia sem `OSError` engolido.
-- **Verificação:**
-```bash
-grep -n 'yt.title' ytPlaylistDL.py
-```
+- **Arquivo:** `ytPlaylistDL.py`, `download_Video_Audio`
+- **Evidência:** `yt.title` vinha do uploader e entrava em `rename` e argumentos de shell.
+- **Mudança:** usar nomes `0000-VIDEO_ID.mp4`/`.mp3` e enviar caminhos como argumentos separados.
+- **Aceite:** `/`, `:`, `?` ou Unicode no título não altera os caminhos locais.
+- **Verificação:** `rg -n 'yt\.title.*(rename|system)|os\.rename' ytPlaylistDL.py`
 
-### BUG-03 · scraping de HTML com regex sem timeout/User-Agent · [P1]
+### BUG-03 · Extração de playlist sem timeout · [P1]
 
-- **Arquivo:** ytPlaylistDL.py:getPageHtml/getPlaylistVideoUrls
-- **Evidência:** `getPlaylistVideoUrls` faz scraping de HTML com regex (frágil a mudanças do YouTube); `getPageHtml` usa `urllib` (`urlopen`) sem timeout e sem `User-Agent`.
-- **Impacto:** Extração quebra a qualquer mudança no HTML do YouTube; sem timeout a falha de rede trava o script em vez de falhar rápido com mensagem clara ([P1]).
-- **Mudança:** Adicionar timeout explícito no `urlopen` + `User-Agent`; considerar migrar a extração para `pytube.Playlist`.
-- **Aceite:** Falha de rede falha rápido com mensagem clara em vez de travar.
-- **Verificação:**
-```bash
-grep -n 'timeout\|User-Agent' ytPlaylistDL.py
-```
+- **Arquivo:** `ytPlaylistDL.py`, `getPlaylistVideoUrls`
+- **Evidência:** o scraper com regex era frágil e `urlopen` não tinha limite de espera.
+- **Mudança:** usar `pytubefix.Playlist`, normalizar entrada HTTPS e definir timeout de rede de 30 segundos; downloads têm até três tentativas.
+- **Aceite:** lista de vídeos vem da biblioteca fixada e falha de rede termina com mensagem útil.
+- **Verificação:** `rg -n 'Playlist\(|setdefaulttimeout|NETWORK_TIMEOUT_SECONDS|max_retries' ytPlaylistDL.py`
 
 ## 5. Qualidade: testes
 
-### TEST-01 · zero testes · [P2]
+### TEST-01 · Funções sem cobertura · [P2]
 
-- **Arquivo:** (ausente) tests/
-- **Evidência:** Sem testes, sem CI, sem tratamento de erro específico (bare `except` em download). Não há diretório de testes nem `pytest`/`unittest` no repositório.
-- **Impacto:** Regressões (ex.: BUG-01, BUG-03, SEC-03) não são detectadas automaticamente; cada mudança no scraping ou no `pytube` exige teste manual.
-- **Mudança:** Criar testes unitários puros (sem rede) para `getHumanTime`, `bytestostr`, `getFinalVideoUrl` e `getPlaylistUrlID` (não precisam de rede). Mínimo de 4 testes com `pytest`.
-- **Aceite:** `pytest` com ≥4 testes passando, sem dependência de rede.
-- **Verificação:**
-```bash
-python -m pytest -q
-```
+- **Arquivo:** *(ausente)* `tests/`
+- **Evidência:** funções de formatação e validação não têm testes offline.
+- **Mudança:** futuramente testar IDs, normalização de URLs, formatação e erros de configuração sem rede.
+- **Aceite:** suíte unitária passa sem chamar YouTube.
+- **Estado:** pendente; não adicionada nem executada nesta rodada.
+- **Verificação futura:** `python -m pytest -q`
 
 ## 6. DevOps / Infra
 
-### DEVOPS-01 · sem CI/lint · [P2]
+### DEVOPS-01 · Sem lint ou CI · [P2]
 
-- **Arquivo:** (ausente) .github/workflows/
-- **Evidência:** Sem testes, sem CI. O `.gitignore` só tem `*.iml`/`.idea`; não há workflow, lint ou compilação automatizada.
-- **Impacto:** Código quebrado (ex.: BUG-01) entra na branch sem barreira; estilo e erros de sintaxe não são checados automaticamente.
-- **Mudança:** Criar workflow com `py_compile` + `ruff` + `pytest` para bloquear push quebrado.
-- **Aceite:** Push quebrado é bloqueado pelo CI; `py_compile`, `ruff` e `pytest` executam a cada push/PR.
-- **Verificação:**
-```bash
-ls .github/workflows/
-```
+- **Arquivo:** `.github/workflows/ci.yml`, `requirements-dev.txt`, `pyproject.toml`
+- **Evidência:** não havia verificações automáticas.
+- **Mudança:** CI instala dependências fixadas e executa `py_compile` e Ruff em Python 3.14.
+- **Aceite:** erro de sintaxe ou lint bloqueia push/pull request.
+- **Verificação local:** `python -m py_compile ytPlaylistDL.py && ruff check ytPlaylistDL.py`
 
 ## 7. Documentação
 
-### DOC-01 · README pede Python 3.4.1+ (2014, EOL) · [P2]
+### DOC-01 · Requisitos e uso desatualizados · [P2]
 
-- **Arquivo:** README.md
-- **Evidência:** O `README.md` diz "needs Python 3.4.1+" (versão de 2014, EOL há anos) e manda `pip3 install pytube` solto, sem mencionar `ffmpeg`/`lame`.
-- **Impacto:** Instrução desatualizada e não reproduzível do zero: usuário instala Python EOL e `pytube` flutuante, sem saber dos binários externos.
-- **Mudança:** Atualizar para Python 3.10+, documentar `ffmpeg`/`lame`, `requirements.txt`, e limitações (ToS do YouTube).
-- **Aceite:** Instrução funciona do zero em máquina limpa seguindo só o `README.md`.
-- **Verificação:**
+- **Arquivo:** `README.md`
+- **Evidência:** pedia Python 3.4.1 e não documentava conversores nem restrições de uso.
+- **Mudança:** documentar Python 3.10+, venv, dependência fixada, FFmpeg/LAME, comandos e Termos do YouTube.
+- **Aceite:** a instalação e a autorização de download estão explícitas.
+- **Verificação:** `rg -n 'Python 3\.10|requirements\.txt|FFmpeg|LAME|Terms of Service' README.md`
+
+## 8. Ordem de execução
+
+1. **Wave 1 — P0:** BUG-01 e BUG-02.
+2. **Wave 2 — P1:** BUG-03 e SEC-01.
+3. **Wave 3 — P2:** SEC-02, SEC-03, DEVOPS-01 e DOC-01.
+4. TEST-01 segue pendente.
+
+## 9. Fora de escopo e riscos
+
+- Não contornar proteções nem baixar conteúdo sem autorização; os Termos restringem downloads salvo autorização do serviço, permissão aplicável ou base legal pertinente.
+- Não adicionar download paralelo, GUI ou formatos além de MP4, WAV temporário e MP3.
+- O YouTube pode alterar seus endpoints; uma versão fixada melhora reprodução, mas não impede futuras quebras.
+- O modo de rede é um timeout global do processo, adequado ao CLI sequencial.
+
+## 10. Definição de pronto
+
+- [x] BUG-01 — `perf_counter` e taxa segura.
+- [x] BUG-02 — nomes por índice e ID; nenhum rename/shell com título.
+- [x] BUG-03 — `pytubefix.Playlist` com timeout e tentativas limitadas.
+- [x] SEC-01 — `pytubefix` fixado.
+- [x] SEC-02 — subprocesso sem shell e verificação de executáveis.
+- [x] SEC-03 — URL canônica HTTPS e host validado.
+- [ ] TEST-01 — testes offline pendentes.
+- [x] DEVOPS-01 — CI estática com sintaxe e Ruff.
+- [x] DOC-01 — README atualizado.
+
+**Validação estática:**
+
 ```bash
-grep -ni 'python 3' README.md
+python -m py_compile ytPlaylistDL.py
+ruff check ytPlaylistDL.py
+python -m pip install -r requirements-dev.txt --dry-run
+git diff --check
 ```
 
-## 8. Ordem de execução (waves)
-
-- **Wave 1 — Desbloquear execução [P0]:** BUG-01 (`time.clock` → `time.perf_counter()`), BUG-02 (sanitizar `yt.title` antes do `os.rename`). Motivo: sem isso o script nem roda nem renomeia em Python moderno.
-- **Wave 2 — Reprodutibilidade e rede [P1]:** SEC-01 (criar `requirements.txt` com `pytube` pinado), BUG-03 (timeout + `User-Agent` no `urlopen`; avaliar `pytube.Playlist`). Motivo: torna a instalação repetível e a falha de rede rápida e clara.
-- **Wave 3 — Hardening e higiene [P2]:** SEC-02 (`subprocess.run` sem shell + `shutil.which('ffmpeg'/'lame')`), SEC-03 (`https`), TEST-01 (≥4 testes puros com `pytest`), DEVOPS-01 (workflow `py_compile` + `ruff` + `pytest`), DOC-01 (`README.md` para Python 3.10+ com `ffmpeg`/`lame`, `requirements.txt` e ToS). Motivo: fecha segurança, qualidade e documentação após o script voltar a funcionar.
-- Dependências entre waves: Wave 2 depende da Wave 1 (só faz sentido pinar/testar rede com o script executando); Wave 3 depende das anteriores (testes e CI cobrem o código já corrigido).
-
-## 9. Fora de escopo / riscos
-
-- Não escalar para burlar proteções do YouTube; respeitar os Termos de Serviço (ToS) do YouTube — o plano cobre apenas download legítimo de conteúdo permitido, documentando as limitações no `README.md`.
-- Não reescrever o extrator de playlist para APIs não oficiais ou técnicas anti-bloqueio; a migração sugerida é apenas para `pytube.Playlist` (uso suportado).
-- Não adicionar download paralelo, GUI ou novos formatos além do fluxo atual `mp4` → `wav` → `mp3` (`ffmpeg`/`lame`).
-- Risco: mudanças no HTML do YouTube ou no `pytube` podem requebrar BUG-03/SEC-01 mesmo após o fix — mitigado por `requirements.txt` pinado e testes puros.
-- Risco: títulos com Unicode/controles ainda podem variar por SO mesmo após sanitização — mitigado por teste manual com títulos problemáticos.
-- Risco: `ffmpeg`/`lame` ausentes ou com versões incompatíveis — mitigado por checagem com `shutil.which` e documentação.
-
-## 10. Definição de pronto (DoD)
-
-- [ ] `grep -n time.clock ytPlaylistDL.py` vazio e `print_progress` sem `AttributeError` (BUG-01).
-- [ ] Título com `/ : ?` baixa e renomeia sem `OSError` (BUG-02).
-- [ ] `grep -n 'timeout\|User-Agent' ytPlaylistDL.py` com ocorrências (BUG-03).
-- [ ] `cat requirements.txt` mostra `pytube==<versão testada>` e `pip install -r requirements.txt` reproduz (SEC-01).
-- [ ] `grep -n 'os.system' ytPlaylistDL.py` vazio; binários checados com erro claro (SEC-02).
-- [ ] `grep -n 'http://www.youtube' ytPlaylistDL.py` vazio (SEC-03).
-- [ ] `python -m pytest -q` com ≥4 testes passando sem rede (TEST-01).
-- [ ] `ls .github/workflows/` existe e CI com `py_compile` + `ruff` + `pytest` verde (DEVOPS-01).
-- [ ] `grep -ni 'python 3' README.md` indica Python 3.10+ com `ffmpeg`/`lame`, `requirements.txt` e ToS (DOC-01).
-- [ ] `python3 /tmp/validate.py youtubePlaylistDL` retorna OK (11 seções, sem IDs duplicados, todos os 6 campos).
-
-*Fim do plano. Gerado por leitura direta do código em 2026-10-05. Valide com `python3 /tmp/validate.py youtubePlaylistDL`.*
+*Plano atualizado em 2026-10-11. TEST-01 permanece pendente; OAuth/playlist e downloads reais não foram exercitados.*
