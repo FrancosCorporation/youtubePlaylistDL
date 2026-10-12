@@ -1,6 +1,6 @@
 # MELHORIAS — youtubePlaylistDL
 
-> **Análise inicial:** 2026-10-05 · **Atualizado:** 2026-10-11 · Python 3.10+ · branch `master`
+> **Análise inicial:** 2026-10-05 · **Atualizado:** 2026-10-11 · Python 3.11+ · branch `master`
 > O programa continua pequeno: um CLI para playlist, MP4 progressivo e MP3.
 
 ## 0. Como usar este documento
@@ -28,6 +28,7 @@ As correções desta rodada substituem o scraper pelo `Playlist` de `pytubefix`,
 | SEC-03 | URL final usando HTTP | P2 | Implementado |
 | TEST-01 | Sem testes unitários | P2 | Pendente |
 | DEVOPS-01 | Sem lint/CI | P2 | Implementado; CI não executa testes |
+| DEVOPS-02 | Python 3.10 sem suporte de segurança e CI em uma versão | P1 | Implementado: Python 3.11+ e matriz 3.11/3.14 |
 | DOC-01 | Requisitos e limitações legais desatualizados | P2 | Implementado |
 
 ## 3. Segurança
@@ -99,9 +100,17 @@ As correções desta rodada substituem o scraper pelo `Playlist` de `pytubefix`,
 
 - **Arquivo:** `.github/workflows/ci.yml`, `requirements-dev.txt`, `pyproject.toml`
 - **Evidência:** não havia verificações automáticas.
-- **Mudança:** CI instala dependências fixadas e executa `py_compile` e Ruff em Python 3.14.
+- **Mudança:** CI instala dependências fixadas e executa `py_compile` e Ruff em Python 3.11 e 3.14.
 - **Aceite:** erro de sintaxe ou lint bloqueia push/pull request.
 - **Verificação local:** `python -m py_compile ytPlaylistDL.py && ruff check ytPlaylistDL.py`
+
+### DEVOPS-02 · Versão mínima Python sem suporte e CI estreita · [P1]
+
+- **Arquivos:** `README.md`, `pyproject.toml`, `.github/workflows/ci.yml`
+- **Evidência:** o projeto dizia aceitar Python 3.10, cujo ciclo de suporte terminou em 2026-10-01. O workflow só verificava Python 3.14 e usava `ubuntu-latest`, sem fixar o runner.
+- **Mudança:** exigir Python 3.11+, alinhar o alvo do Ruff e verificar sintaxe/lint em Python 3.11 e 3.14 sobre Ubuntu 24.04.
+- **Referência:** [Python 3.10.22 chegou ao fim de vida em 2026-10-01](https://www.python.org/downloads/release/python-31022/).
+- **Validação:** sintaxe em Python 3.14 e Ruff local passaram; a CI confirmará Python 3.11 e 3.14 após o push. Não adicionei nem executei testes.
 
 ## 7. Documentação
 
@@ -109,9 +118,9 @@ As correções desta rodada substituem o scraper pelo `Playlist` de `pytubefix`,
 
 - **Arquivo:** `README.md`
 - **Evidência:** pedia Python 3.4.1 e não documentava conversores nem restrições de uso.
-- **Mudança:** documentar Python 3.10+, venv, dependência fixada, FFmpeg/LAME, comandos e Termos do YouTube.
+- **Mudança:** documentar Python 3.11+, venv, dependência fixada, FFmpeg/LAME, comandos e Termos do YouTube.
 - **Aceite:** a instalação e a autorização de download estão explícitas.
-- **Verificação:** `rg -n 'Python 3\.10|requirements\.txt|FFmpeg|LAME|Terms of Service' README.md`
+- **Verificação:** `rg -n 'Python 3\.11|requirements\.txt|FFmpeg|LAME|Terms of Service' README.md`
 
 ## 8. Ordem de execução
 
@@ -137,6 +146,7 @@ As correções desta rodada substituem o scraper pelo `Playlist` de `pytubefix`,
 - [x] SEC-03 — URL canônica HTTPS e host validado.
 - [ ] TEST-01 — testes offline pendentes.
 - [x] DEVOPS-01 — CI estática com sintaxe e Ruff.
+- [x] DEVOPS-02 — mínimo Python 3.11 e matriz de versões suportadas.
 - [x] DOC-01 — README atualizado.
 
 **Validação estática:**

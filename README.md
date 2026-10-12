@@ -6,7 +6,7 @@ titles cannot break paths on Windows, macOS, or Linux.
 
 ## Requirements
 
-- Python 3.10 or newer.
+- Python 3.11 or newer.
 - FFmpeg and LAME available on `PATH`.
 - The pinned Python dependency in `requirements.txt`.
 
