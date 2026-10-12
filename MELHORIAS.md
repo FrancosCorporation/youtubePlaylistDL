@@ -110,7 +110,7 @@ As correções desta rodada substituem o scraper pelo `Playlist` de `pytubefix`,
 - **Evidência:** o projeto dizia aceitar Python 3.10, cujo ciclo de suporte terminou em 2026-10-01. O workflow só verificava Python 3.14 e usava `ubuntu-latest`, sem fixar o runner.
 - **Mudança:** exigir Python 3.11+, alinhar o alvo do Ruff e verificar sintaxe/lint em Python 3.11 e 3.14 sobre Ubuntu 24.04.
 - **Referência:** [Python 3.10.22 chegou ao fim de vida em 2026-10-01](https://www.python.org/downloads/release/python-31022/).
-- **Validação:** sintaxe em Python 3.14 e Ruff local passaram; a CI confirmará Python 3.11 e 3.14 após o push. Não adicionei nem executei testes.
+- **Validação:** sintaxe em Python 3.14 e Ruff local passaram. CI `38194291510` passou em Python 3.11 e 3.14 no Ubuntu 24.04. Não adicionei nem executei testes.
 
 ## 7. Documentação
 
